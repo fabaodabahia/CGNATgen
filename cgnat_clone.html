@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <title>Gerador de CGNAT v2.1 - Clone Local</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="O Gerador de CGNAT para RouterOS é uma ferramenta gratuita que permite a geração de regras de CGNAT para Mikrotik RouterOS de forma simples e rápida.">
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-0evHe/X+R7YkIZDRvuzKMRqM+OrBnVFBL6DOitfPri4tjfHxaWutUpFmBp4vmVor" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/js/bootstrap.bundle.min.js" integrity="sha384-pprn3073KE6tl6bjs2QrFaJGz5/SUsLqktiwsUTF55Jfv3qYSDhgCecCxMW52nD2" crossorigin="anonymous"></script>
+
+<style>
+  pre { font-size: 12px; white-space: pre-wrap; word-wrap: break-word; }
+  th,td { font-size: 10px;}
+  .output-container { margin-top: 20px; }
+  .copy-btn { margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<main>
+  <div class="container">
+    <header class="d-flex flex-wrap justify-content-center py-3 mb-4 border-bottom">
+      <a href="#" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-dark text-decoration-none">
+        <span class="fs-3"><b>Gerador de CGNAT para RouterOS</b></span>
+      </a>
+    </header>
+
+    <div class="row g-3">
+      <div class="col-md-9 col-lg-10">
+        <form class="needs-validation" id="formulario" novalidate>
+          <div class="row g-3">
+
+            <div class="col-sm-6 input-group-lg">
+              <label for="PREFIX_CGNAT" class="form-label">Networks inicial privado</label>
+              <input type="text" class="form-control" id="PREFIX_CGNAT" name="PREFIX_CGNAT" value="100.64.0.0" placeholder="ex: 100.64.0.0" required>
+            </div>
+
+            <div class="col-sm-6 input-group-lg">
+              <label for="PREFIX_PUB" class="form-label">Prefixo público <small>(Network)</small></label>
+              <input type="text" class="form-control" id="PREFIX_PUB" name="PREFIX_PUB" placeholder="ex: 200.2.3.0/27" required>
+            </div>
+
+            <div class="col-sm-6 input-group-lg">
+              <label for="CLIENTE_POR_IP" class="form-label">1 Público para quantos Privados?</label>
+              <select class="form-select" name="CLIENTE_POR_IP" id="CLIENTE_POR_IP">
+                <option value="4">4 Clientes [~16000 Portas]</option>
+                <option value="8">8 Clientes [~8000 Portas]</option>
+                <option value="16">16 Clientes [~4000 Portas]</option>
+                <option value="32" selected>32 Clientes [~2000 Portas]</option>
+                <option value="64">64 Clientes [~1000 Portas]</option>
+                <option value="128">128 Clientes [~500 Portas] * (Não use)</option>
+                <option value="256">256 Clientes [~256 Portas] * (Não use)</option>
+              </select>
+            </div>
+            <div class="col-sm-6 input-group-lg">
+              <label for="SEQUENCIAL_JUMP" class="form-label">Sequencial Chain(s)</label>
+              <input type="number" class="form-control" id="SEQUENCIAL_JUMP" name="SEQUENCIAL_JUMP" placeholder="0" value="0">
+            </div>
+
+            <div class="col-sm-4 input-group-lg">
+              <label for="IGNORE_PREFIXO" class="form-label">Ignorar destino(s)</label>
+              <select class="form-select" name="IGNORE_PREFIXO" id="IGNORE_PREFIXO" onchange="dis_able3()">
+                <option value="n">Nenhum</option>
+                <option value="s">De um Prefixo</option>
+                <option value="l">De uma Address List</option>
+              </select>
+            </div>
+            <div class="col-sm-6 input-group-lg">
+              <label for="IGNORE_PREFIXO_DATA" class="form-label">Ignorar Prefixo/Lista</label>
+              <input type="text" class="form-control" id="IGNORE_PREFIXO_DATA" name="IGNORE_PREFIXO_DATA" placeholder="LISTA_SERVIDORES" disabled>
+            </div>
+            <div class="col-sm-2 input-group-lg">
+              <label for="IGNORE_PREFIXO_NOTRACK" class="form-label">No Track (RAW)</label>
+              <select class="form-select" name="IGNORE_PREFIXO_NOTRACK" id="IGNORE_PREFIXO_NOTRACK" disabled>
+                <option value="s">Sim</option>
+                <option value="null">Não</option>
+              </select>
+            </div>
+
+            <div class="col-sm-6 input-group-lg">
+              <label for="INTERFACE_UPLINK" class="form-label">Interface Uplink</label>
+              <select class="form-select" name="INTERFACE_UPLINK" id="INTERFACE_UPLINK" onchange="dis_able4()">
+                <option value="n">Não informar</option>
+                <option value="s">Nome da Interface (Recomendado)</option>
+                <option value="l">Nome da Interface List</option>
+              </select>
+            </div>
+            <div class="col-sm-6 input-group-lg">
+              <label for="INTERFACE_UPLINK_NOME" class="form-label">Nome/Lista da interface de Uplink</label>
+              <input type="text" class="form-control" id="INTERFACE_UPLINK_NOME" name="INTERFACE_UPLINK_NOME" placeholder="sfp-sfpplus1.1000" disabled>
+            </div>
+
+            <div class="col-sm-6 input-group-lg">
+              <label for="BLACKHOLE_TIPO" class="form-label">Uso de Blackhole</label>
+              <select class="form-select" name="BLACKHOLE_TIPO" id="BLACKHOLE_TIPO" onchange="dis_able5()">
+                <option value="s">Sim - Prefixo (Recomendado)</option>
+                <option value="i">Sim - Prefixos /32</option>
+                <option value="n">Não - (Pode sofrer ataques)</option>
+              </select>
+            </div>
+            <div class="col-sm-6 input-group-lg">
+              <label for="BLACKHOLE_INTERFACE" class="form-label">Nome/Lista da interface de Uplink</label>
+              <input type="text" class="form-control" id="BLACKHOLE_INTERFACE" name="BLACKHOLE_INTERFACE" placeholder="Loopback" disabled>
+            </div>
+
+            <div class="col-sm-4 input-group-lg">
+              <h4 class="mb-3">Protocolos</h4>
+              <div class="my-3">
+                <div class="form-check">
+                  <input id="PROTOCOLO_TCPUDP" name="PROTOCOLO" type="radio" class="form-check-input" value="tcpudp" checked required>
+                  <label class="form-check-label" for="PROTOCOLO_TCPUDP">TCP/UDP <small>(Recomendado Judicialmente)</small></label>
+                </div>
+                <div class="form-check">
+                  <input id="PROTOCOLO_UDP" name="PROTOCOLO" type="radio" class="form-check-input" value="udp" required>
+                  <label class="form-check-label" for="PROTOCOLO_UDP">Apenas TCP  <small>(Problemas Judicial*) </small></label>
+                </div>
+              </div>
+            </div>
+            <div class="col-sm-4 input-group-lg">
+              <h4 class="mb-3">Fasttrack</h4>
+              <div class="my-3">
+                <div class="form-check">
+                  <input id="FASTTRACK_S" name="FASTTRACK" type="radio" class="form-check-input" value="s" checked required>
+                  <label class="form-check-label" for="FASTTRACK_S">Sim <small>(Recomendado)</small></label>
+                </div>
+                <div class="form-check">
+                  <input id="FASTTRACK_N" name="FASTTRACK" type="radio" class="form-check-input" value="n" required>
+                  <label class="form-check-label" for="FASTTRACK_N">Não</label>
+                </div>
+              </div>
+            </div>
+            <div class="col-sm-4 input-group-lg">
+              <h4 class="mb-3">RouterOS</h4>
+              <div class="my-3">
+                <div class="form-check">
+                  <input id="ROUTER_OS_6" name="ROUTER_OS" type="radio" class="form-check-input" value="6" checked required>
+                  <label class="form-check-label" for="ROUTER_OS_6">Versão 6.x</label>
+                </div>
+                <div class="form-check">
+                  <input id="ROUTER_OS_7" name="ROUTER_OS" type="radio" class="form-check-input" value="7" required>
+                  <label class="form-check-label" for="ROUTER_OS_7">Versão 7.x</label>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <button class="w-100 btn btn-success btn-lg mt-4" type="submit">Gerar Script</button>
+        </form>
+
+        <!-- Output Container -->
+        <div class="output-container">
+          <h4 class="mt-4">Script Gerado:</h4>
+          <pre id="output" class="bg-light border p-3" style="min-height: 200px; max-height: 500px; overflow-y: auto;"></pre>
+          <button class="btn btn-primary copy-btn" onclick="copiarTexto()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16">
+              <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
+              <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
+            </svg>
+            Copiar Texto Raw
+          </button>
+          <span id="copyFeedback" class="ms-2 text-success" style="display: none;">Copiado!</span>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+function dis_able3() {
+    var ignorePrefixo = document.getElementById('IGNORE_PREFIXO').value;
+    var ignorePrefixoData = document.getElementById('IGNORE_PREFIXO_DATA');
+    var ignorePrefixoNotrack = document.getElementById('IGNORE_PREFIXO_NOTRACK');
+    
+    if (ignorePrefixo == 's' || ignorePrefixo == 'l') {
+        ignorePrefixoData.disabled = false;
+        ignorePrefixoNotrack.disabled = false;
+    } else {
+        ignorePrefixoData.disabled = true;
+        ignorePrefixoNotrack.disabled = true;
+    }
+}
+
+function dis_able4() {
+    var interfaceUplink = document.getElementById('INTERFACE_UPLINK').value;
+    var interfaceUplinkNome = document.getElementById('INTERFACE_UPLINK_NOME');
+    
+    if (interfaceUplink == 's' || interfaceUplink == 'l') {
+        interfaceUplinkNome.disabled = false;
+    } else {
+        interfaceUplinkNome.disabled = true;
+    }
+}
+
+function dis_able5() {
+    var blackholeTipo = document.getElementById('BLACKHOLE_TIPO').value;
+    var blackholeInterface = document.getElementById('BLACKHOLE_INTERFACE');
+    
+    if (blackholeTipo == 's' || blackholeTipo == 'i') {
+        blackholeInterface.disabled = true;
+    } else {
+        blackholeInterface.disabled = false;
+    }
+}
+
+function ipToInt(ip) {
+    var parts = ip.split('.');
+    return (parseInt(parts[0]) << 24) + (parseInt(parts[1]) << 16) + (parseInt(parts[2]) << 8) + parseInt(parts[3]);
+}
+
+function intToIp(int) {
+    return ((int >> 24) & 255) + '.' + ((int >> 16) & 255) + '.' + ((int >> 8) & 255) + '.' + (int & 255);
+}
+
+function getNetworkAndBroadcast(ip, cidr) {
+    var intIp = ipToInt(ip);
+    var mask = ~((1 << (32 - cidr)) - 1);
+    var network = intIp & mask;
+    var broadcast = network | ~mask;
+    return { network: network, broadcast: broadcast };
+}
+
+function gerarScript() {
+    var prefixCgnat = document.getElementById('PREFIX_CGNAT').value;
+    var prefixPub = document.getElementById('PREFIX_PUB').value;
+    var clientePorIp = parseInt(document.getElementById('CLIENTE_POR_IP').value);
+    var sequencialJump = parseInt(document.getElementById('SEQUENCIAL_JUMP').value) || 0;
+    var ignorePrefixo = document.getElementById('IGNORE_PREFIXO').value;
+    var ignorePrefixoData = document.getElementById('IGNORE_PREFIXO_DATA').value;
+    var ignorePrefixoNotrack = document.getElementById('IGNORE_PREFIXO_NOTRACK').value;
+    var interfaceUplink = document.getElementById('INTERFACE_UPLINK').value;
+    var interfaceUplinkNome = document.getElementById('INTERFACE_UPLINK_NOME').value;
+    var blackholeTipo = document.getElementById('BLACKHOLE_TIPO').value;
+    var protocolo = document.querySelector('input[name="PROTOCOLO"]:checked').value;
+    var fasttrack = document.querySelector('input[name="FASTTRACK"]:checked').value;
+    var routerOs = document.querySelector('input[name="ROUTER_OS"]:checked').value;
+
+    // Parse public prefix
+    var pubParts = prefixPub.split('/');
+    var pubIp = pubParts[0];
+    var pubCidr = parseInt(pubParts[1]);
+    
+    var pubRange = getNetworkAndBroadcast(pubIp, pubCidr);
+    var numIpsPublicos = Math.pow(2, 32 - pubCidr) - 2; // Exclude network and broadcast
+    
+    var script = '';
+    
+    // Add comment header
+    script += '/ip firewall nat\n';
+    script += '# CGNAT Generator - By Rudimar Remontti (Clone)\n';
+    script += '# Generated locally\n\n';
+    
+    // If using No Track (RAW)
+    if (ignorePrefixoNotrack == 's' && ignorePrefixo != 'n') {
+        script += '/ip firewall raw\n';
+        script += 'add action=accept chain=prerouting dst-address-list="' + ignorePrefixoData + '" src-address-list="CGNAT"\n\n';
+        script += '/ip firewall nat\n';
+    }
+    
+    // Generate NAT rules
+    var privateStart = ipToInt(prefixCgnat);
+    var publicStart = pubRange.network + 1; // Start from first usable IP
+    
+    var ipsPerClient = Math.floor(65536 / clientePorIp); // Approximate ports per client
+    
+    var chainCounter = sequencialJump;
+    
+    for (var i = 0; i < numIpsPublicos; i++) {
+        var currentPublicIp = intToIp(publicStart + i);
+        
+        for (var j = 0; j < clientePorIp; j++) {
+            var currentPrivateIp = intToIp(privateStart + (i * clientePorIp) + j);
+            
+            var chainName = 'CGNAT_' + chainCounter;
+            
+            // Create chain rule
+            script += 'add action=jump chain=srcnat comment="Cliente ' + (i * clientePorIp + j + 1) + '" jump-target=' + chainName + ' src-address=' + currentPrivateIp + '/32\n';
+            
+            // Create NAT rule in the chain
+            if (protocolo == 'tcpudp') {
+                script += 'add action=masquerade chain=' + chainName + ' out-interface=' + (interfaceUplink != 'n' ? interfaceUplinkNome : '*') + ' to-addresses=' + currentPublicIp + '\n';
+            } else {
+                script += 'add action=masquerade chain=' + chainName + ' out-interface=' + (interfaceUplink != 'n' ? interfaceUplinkNome : '*') + ' protocol=tcp to-addresses=' + currentPublicIp + '\n';
+            }
+            
+            chainCounter++;
+        }
+    }
+    
+    // Add FastTrack bypass if enabled
+    if (fasttrack == 's') {
+        script += '\n/ip firewall filter\n';
+        script += 'add action=fasttrack-connection chain=forward connection-state=established,related\n';
+    }
+    
+    // Add Blackhole routes if configured
+    if (blackholeTipo != 'n') {
+        script += '\n/route\n';
+        if (blackholeTipo == 's') {
+            script += 'add blackhole distance=1 dst-address=' + prefixPub + '\n';
+        } else if (blackholeTipo == 'i') {
+            for (var i = 0; i < numIpsPublicos; i++) {
+                var currentPublicIp = intToIp(publicStart + i);
+                script += 'add blackhole distance=1 dst-address=' + currentPublicIp + '/32\n';
+            }
+        }
+    }
+    
+    document.getElementById('output').textContent = script;
+}
+
+function copiarTexto() {
+    var texto = document.getElementById('output').textContent;
+    navigator.clipboard.writeText(texto).then(function() {
+        var feedback = document.getElementById('copyFeedback');
+        feedback.style.display = 'inline';
+        setTimeout(function() {
+            feedback.style.display = 'none';
+        }, 2000);
+    }, function(err) {
+        console.error('Erro ao copiar: ', err);
+    });
+}
+
+document.getElementById('formulario').addEventListener('submit', function(e) {
+    e.preventDefault();
+    gerarScript();
+});
+</script>
+
+</body>
+</html>
