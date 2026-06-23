@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <title>Gerador de CGNAT v2.1 - Clone Local</title>
+    <title>Gerador de CGNAT v2.1</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="O Gerador de CGNAT para RouterOS é uma ferramenta gratuita que permite a geração de regras de CGNAT para Mikrotik RouterOS de forma simples e rápida.">
 
@@ -243,7 +243,7 @@
                   <label class="form-check-label" for="PROTOCOLO_TCPUDP">TCP/UDP <small>(Recomendado Judicialmente)</small></label>
                 </div>
                 <div class="form-check">
-                  <input id="PROTOCOLO_UDP" name="PROTOCOLO" type="radio" class="form-check-input" value="udp" required>
+                  <input id="PROTOCOLO_UDP" name="PROTOCOLO" type="radio" class="form-check-input" value="tcp" required>
                   <label class="form-check-label" for="PROTOCOLO_UDP">Apenas TCP  <small>(Problemas Judicial*) </small></label>
                 </div>
               </div>
@@ -330,9 +330,9 @@ function dis_able5() {
     var blackholeInterface = document.getElementById('BLACKHOLE_INTERFACE');
     
     if (blackholeTipo == 's' || blackholeTipo == 'i') {
-        blackholeInterface.disabled = true;
-    } else {
         blackholeInterface.disabled = false;
+    } else {
+        blackholeInterface.disabled = true;
     }
 }
 
@@ -406,8 +406,7 @@ function gerarScript() {
     
     // Add comment header
     script += '/ip firewall nat\n';
-    script += '# CGNAT Generator - By Rudimar Remontti (Clone)\n';
-    script += '# Generated locally\n\n';
+    script += '# CGNAT Generator - By Rudimar Remontti\n\n';
     
     // If using No Track (RAW)
     if (ignorePrefixoNotrack == 's' && ignorePrefixo != 'n') {
@@ -430,9 +429,9 @@ function gerarScript() {
     
     if (usePortMapping) {
         if (portMapping === 'range' && portRangeStart && portRangeEnd) {
-            portSpec = ' ports=' + portRangeStart + '-' + portRangeEnd;
+            portSpec = ' to-ports=' + portRangeStart + '-' + portRangeEnd;
         } else if (portMapping === 'list' && portList) {
-            portSpec = ' ports=' + portList.replace(/\s+/g, '');
+            portSpec = ' to-ports=' + portList.replace(/\s+/g, '');
         }
     }
     
@@ -451,15 +450,15 @@ function gerarScript() {
             // Create NAT rule in the chain with optional port mapping
             if (protocolo == 'tcpudp') {
                 if (usePortMapping && portSpec) {
-                    script += 'add action=netmap chain=' + chainName + ' out-interface=' + (interfaceUplink != 'n' ? interfaceUplinkNome : '*') + ' to-addresses=' + currentPublicIp + portSpec + '\\n';
+                    script += 'add action=netmap chain=' + chainName + (interfaceUplink != 'n' ? ' out-interface=' + interfaceUplinkNome : '') + ' to-addresses=' + currentPublicIp + portSpec + '\n';
                 } else {
-                    script += 'add action=masquerade chain=' + chainName + ' out-interface=' + (interfaceUplink != 'n' ? interfaceUplinkNome : '*') + ' to-addresses=' + currentPublicIp + '\\n';
+                    script += 'add action=src-nat chain=' + chainName + (interfaceUplink != 'n' ? ' out-interface=' + interfaceUplinkNome : '') + ' to-addresses=' + currentPublicIp + '\n';
                 }
             } else {
                 if (usePortMapping && portSpec) {
-                    script += 'add action=netmap chain=' + chainName + ' out-interface=' + (interfaceUplink != 'n' ? interfaceUplinkNome : '*') + ' protocol=tcp to-addresses=' + currentPublicIp + portSpec + '\\n';
+                    script += 'add action=netmap chain=' + chainName + (interfaceUplink != 'n' ? ' out-interface=' + interfaceUplinkNome : '') + ' protocol=tcp to-addresses=' + currentPublicIp + portSpec + '\n';
                 } else {
-                    script += 'add action=masquerade chain=' + chainName + ' out-interface=' + (interfaceUplink != 'n' ? interfaceUplinkNome : '*') + ' protocol=tcp to-addresses=' + currentPublicIp + '\\n';
+                    script += 'add action=src-nat chain=' + chainName + (interfaceUplink != 'n' ? ' out-interface=' + interfaceUplinkNome : '') + ' protocol=tcp to-addresses=' + currentPublicIp + '\n';
                 }
             }
             
@@ -478,11 +477,11 @@ function gerarScript() {
     if (blackholeTipo != 'n') {
         script += '\n/route\n';
         if (blackholeTipo == 's') {
-            script += 'add blackhole distance=1 dst-address=' + prefixPub + (blackholeInterface ? ' gateway=' + blackholeInterface : '') + '\n';
+            script += 'add blackhole distance=1 dst-address=' + prefixPub + (blackholeInterface && blackholeInterface.trim() !== '' ? ' gateway=' + blackholeInterface : '') + '\n';
         } else if (blackholeTipo == 'i') {
             for (var i = 0; i < numIpsPublicos; i++) {
                 var currentPublicIp = intToIp(publicStart + i);
-                script += 'add blackhole distance=1 dst-address=' + currentPublicIp + '/32' + (blackholeInterface ? ' gateway=' + blackholeInterface : '') + '\n';
+                script += 'add blackhole distance=1 dst-address=' + currentPublicIp + '/32' + (blackholeInterface && blackholeInterface.trim() !== '' ? ' gateway=' + blackholeInterface : '') + '\n';
             }
         }
     }
